@@ -5,6 +5,8 @@ import DonationForm from '../components/DonationForm';
 import RequestForm from '../components/RequestForm';
 import DonationList from '../components/DonationList';
 import RequestList from '../components/RequestList';
+import UserManagement from '../components/UserManagement'; // Import UserManagement component
+import Statistics from '../components/Statistics'; // Import Statistics component
 
 const Dashboard = () => {
   const { user, logout } = useAuth();
@@ -14,10 +16,12 @@ const Dashboard = () => {
 
   const handleDonationSuccess = () => {
     setRefreshKey(prev => prev + 1);
+    setShowDonationForm(false);
   };
 
   const handleRequestSuccess = () => {
     setRefreshKey(prev => prev + 1);
+    setShowRequestForm(false);
   };
 
   return (
@@ -34,7 +38,14 @@ const Dashboard = () => {
         </Col>
       </Row>
 
-      <Tabs defaultActiveKey="donations" className="mb-3">
+      {/* Add Statistics component for admin and hospital roles */}
+      {(user?.role === 'admin' || user?.role === 'hospital') && <Statistics />}
+
+      <Tabs defaultActiveKey="dashboard" className="mb-3">
+        <Tab eventKey="dashboard" title="Dashboard">
+          <p className="mt-3">Use the tabs above to manage donations and requests based on your role.</p>
+        </Tab>
+
         {user?.role === 'donor' && (
           <Tab eventKey="donations" title="My Donations">
             <div className="text-end mb-3">
@@ -67,8 +78,15 @@ const Dashboard = () => {
             </Tab>
           </>
         )}
+
+        {user?.role === 'admin' && (
+          <Tab eventKey="users" title="User Management">
+            <UserManagement /> {/* Add User Management tab for admin */}
+          </Tab>
+        )}
       </Tabs>
 
+      {/* Modals for Forms */}
       {user?.role === 'donor' && (
         <DonationForm 
           show={showDonationForm} 

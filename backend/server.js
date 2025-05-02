@@ -337,7 +337,91 @@ app.post('/api/match', authenticateJWT, async (req, res) => {
   }
 });
 
-// Start server
+// Get all users (admin only)
+app.get('/api/users', authenticateJWT, async (req, res) => {
+  if (req.user.role !== 'admin') {
+    return res.status(403).json({ message: 'Unauthorized' });
+  }
+  
+  try {
+    const [users] = await db.promise().query('SELECT id, name, email, role, contact_number, blood_type FROM users');
+    res.json(users);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Update user (admin only)
+app.put('/api/users/:id', authenticateJWT, async (req, res) => {
+  if (req.user.role !== 'admin') {
+    return res.status(403).json({ message: 'Unauthorized' });
+  }
+  
+  const userId = req.params.id;
+  const { name, email, role, contact_number, address, blood_type } = req.body;
+  
+  try {
+    await db.promise().query(
+      'UPDATE users SET name = ?, email = ?, role = ?, contact_number = ?, address = ?, blood_type = ? WHERE id = ?',
+      [name, email, role, contact_number, address, blood_type, userId]
+    );
+    
+    res.json({ message: 'User updated successfully' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Delete user (admin only)
+app.delete('/api/users/:id', authenticateJWT, async (req, res) => {
+  if (req.user.role !== 'admin') {
+    return res.status(403).json({ message: 'Unauthorized' });
+  }
+  
+  const userId = req.params.id;
+  
+  try {
+    await db.promise().query('DELETE FROM users WHERE id = ?', [userId]);
+    res.json({ message: 'User deleted successfully' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Get statistics (admin/hospital)
+app.get('/api/statistics', authenticateJWT, async (req, res) => {
+  if (req.user.role !== 'admin' && req.user.role !== 'hospital') {
+    return res.status(403).json({ message: 'Unauthorized' });
+  }
+  
+  try {
+    // Get counts for different statuses
+    const [donationCounts] = await db.promise().query(`
+      SELECT status, COUNT(*) as count 
+      FROM donations 
+      GROUP BY status
+    `);
+    
+    const [requestCounts] = await db.promise().query(`
+      SELECT status, COUNT(*) as count 
+      FROM requests 
+      GROUP BY status
+    `);
+    
+    res.json({
+      donationCounts,
+      requestCounts
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Start the server
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
