@@ -1,68 +1,95 @@
-import { useState } from 'react';
-import { Form, Button, Alert, Modal } from 'react-bootstrap';
-import OrganList from './OrganList';
-import axios from 'axios';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
+import { Alert, Spinner, Form, Button } from 'react-bootstrap';
 
-const DonationForm = ({ show, onHide, onSuccess }) => {
-  const [selectedOrgan, setSelectedOrgan] = useState(null);
-  const [donationDate, setDonationDate] = useState('');
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
+const DonationForm = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
+  const [organs, setOrgans] = useState([]);
+  const [formData, setFormData] = useState({
+    organ_id: '',
+    donation_date: new Date().toISOString().split('T')[0]
+  });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    const fetchOrgans = async () => {
+      try {
+        const response = await axios.get('/api/organs');
+        setOrgans(response.data);
+      } catch (error) {
+        setError('Failed to load organ list');
+      }
+    };
+    fetchOrgans();
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    if (!selectedOrgan) {
-      setError('Please select an organ');
-      return;
-    }
-    
+    setLoading(true);
+    setError('');
+
     try {
-      await axios.post('http://localhost:5000/api/donations', {
-        organ_id: selectedOrgan,
-        donation_date: donationDate
+      const response = await axios.post('/api/donations', {
+        ...formData,
+        donor_id: user.id
       });
       
-      setSuccess('Donation registered successfully');
-      setError('');
-      onSuccess();
-      onHide();
-    } catch (err) {
-      setError(err.response?.data?.message || 'Failed to register donation');
+      // Redirect to My Donations with success state
+      navigate('/my-donations', { 
+        state: { 
+          success: true,
+          newDonation: response.data 
+        } 
+      });
+    } catch (error) {
+      setError(error.response?.data?.message || 'Failed to register donation');
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <Modal show={show} onHide={onHide} size="lg">
-      <Modal.Header closeButton>
-        <Modal.Title>Register Organ Donation</Modal.Title>
-      </Modal.Header>
-      <Modal.Body>
-        {error && <Alert variant="danger">{error}</Alert>}
-        {success && <Alert variant="success">{success}</Alert>}
-        
-        <h5>Select Organ to Donate</h5>
-        <OrganList onSelect={setSelectedOrgan} />
-        
-        <Form onSubmit={handleSubmit} className="mt-3">
-          <Form.Group className="mb-3">
-            <Form.Label>Donation Date</Form.Label>
-            <Form.Control
-              type="date"
-              value={donationDate}
-              onChange={(e) => setDonationDate(e.target.value)}
-              required
-            />
-          </Form.Group>
-          
-          <Button variant="primary" type="submit" disabled={!selectedOrgan}>
-            Submit Donation
-          </Button>
-        </Form>
-      </Modal.Body>
-    </Modal>
+    <div className="container mt-4">
+      <h2>Register Organ Donation</h2>
+      {error && <Alert variant="danger">{error}</Alert>}
+
+      <Form onSubmit={handleSubmit}>
+        <Form.Group className="mb-3">
+          <Form.Label>Organ</Form.Label>
+          <Form.Select
+            value={formData.organ_id}
+            onChange={(e) => setFormData({...formData, organ_id: e.target.value})}
+            required
+            disabled={loading}
+          >
+            <option value="">Select an organ</option>
+            {organs.map(organ => (
+              <option key={organ.id} value={organ.id}>{organ.name}</option>
+            ))}
+          </Form.Select>
+        </Form.Group>
+
+        <Form.Group className="mb-3">
+          <Form.Label>Donation Date</Form.Label>
+          <Form.Control
+            type="date"
+            value={formData.donation_date}
+            onChange={(e) => setFormData({...formData, donation_date: e.target.value})}
+            required
+            disabled={loading}
+            max={new Date().toISOString().split('T')[0]}
+          />
+        </Form.Group>
+
+        <Button variant="primary" type="submit" disabled={loading}>
+          {loading ? <Spinner size="sm" animation="border" /> : 'Submit Donation'}
+        </Button>
+      </Form>
+    </div>
   );
 };
 

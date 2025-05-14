@@ -1,108 +1,75 @@
-import { useState } from 'react';
-import { Container, Tabs, Tab, Button, Row, Col } from 'react-bootstrap';
 import { useAuth } from '../context/AuthContext';
-import DonationForm from '../components/DonationForm';
-import RequestForm from '../components/RequestForm';
-import DonationList from '../components/DonationList';
-import RequestList from '../components/RequestList';
-import UserManagement from '../components/UserManagement'; // Import UserManagement component
-import Statistics from '../components/Statistics'; // Import Statistics component
 
 const Dashboard = () => {
-  const { user, logout } = useAuth();
-  const [showDonationForm, setShowDonationForm] = useState(false);
-  const [showRequestForm, setShowRequestForm] = useState(false);
-  const [refreshKey, setRefreshKey] = useState(0);
-
-  const handleDonationSuccess = () => {
-    setRefreshKey(prev => prev + 1);
-    setShowDonationForm(false);
-  };
-
-  const handleRequestSuccess = () => {
-    setRefreshKey(prev => prev + 1);
-    setShowRequestForm(false);
-  };
+  const { user } = useAuth();
 
   return (
-    <Container className="mt-5">
-      <Row className="mb-4">
-        <Col>
-          <h1>Welcome, {user?.name}</h1>
-          <p>Email: {user?.email} | Role: {user?.role}</p>
-        </Col>
-        <Col className="text-end">
-          <Button variant="danger" onClick={logout}>
-            Logout
-          </Button>
-        </Col>
-      </Row>
-
-      {/* Add Statistics component for admin and hospital roles */}
-      {(user?.role === 'admin' || user?.role === 'hospital') && <Statistics />}
-
-      <Tabs defaultActiveKey="dashboard" className="mb-3">
-        <Tab eventKey="dashboard" title="Dashboard">
-          <p className="mt-3">Use the tabs above to manage donations and requests based on your role.</p>
-        </Tab>
-
-        {user?.role === 'donor' && (
-          <Tab eventKey="donations" title="My Donations">
-            <div className="text-end mb-3">
-              <Button variant="primary" onClick={() => setShowDonationForm(true)}>
-                Register New Donation
-              </Button>
-            </div>
-            <DonationList key={refreshKey} />
-          </Tab>
-        )}
-
-        {user?.role === 'recipient' && (
-          <Tab eventKey="requests" title="My Requests">
-            <div className="text-end mb-3">
-              <Button variant="primary" onClick={() => setShowRequestForm(true)}>
-                Submit New Request
-              </Button>
-            </div>
-            <RequestList key={refreshKey} />
-          </Tab>
-        )}
-
-        {(user?.role === 'hospital' || user?.role === 'admin') && (
-          <>
-            <Tab eventKey="pending-donations" title="Pending Donations">
-              <DonationList key={refreshKey} />
-            </Tab>
-            <Tab eventKey="pending-requests" title="Pending Requests">
-              <RequestList key={refreshKey} />
-            </Tab>
-          </>
-        )}
-
-        {user?.role === 'admin' && (
-          <Tab eventKey="users" title="User Management">
-            <UserManagement /> {/* Add User Management tab for admin */}
-          </Tab>
-        )}
-      </Tabs>
-
-      {/* Modals for Forms */}
+    <div className="container mt-4">
+      <h1>Welcome, {user?.name}</h1>
+      <p>Role: {user?.role}</p>
+      
       {user?.role === 'donor' && (
-        <DonationForm 
-          show={showDonationForm} 
-          onHide={() => setShowDonationForm(false)} 
-          onSuccess={handleDonationSuccess}
-        />
+        <div className="card">
+          <div className="card-body">
+            <h5 className="card-title">Donor Dashboard</h5>
+            <p className="card-text">
+              You can register your organ donations here.
+            </p>
+            <a href="/donate" className="btn btn-primary">
+              Register Donation
+            </a>
+          </div>
+        </div>
       )}
-
+      
       {user?.role === 'recipient' && (
-        <RequestForm 
-          show={showRequestForm} 
-          onHide={() => setShowRequestForm(false)} 
-          onSuccess={handleRequestSuccess}
-        />
+        <div className="card">
+          <div className="card-body">
+            <h5 className="card-title">Recipient Dashboard</h5>
+            <p className="card-text">
+              You can request organs you need here.
+            </p>
+            <a href="/request-organ" className="btn btn-primary">
+              Request Organ
+            </a>
+          </div>
+        </div>
       )}
-    </Container>
+      
+      {user?.role === 'hospital' && (
+        <div className="card">
+          <div className="card-body">
+            <h5 className="card-title">Hospital Dashboard</h5>
+            <p className="card-text">
+              Manage donations and requests.
+            </p>
+            <a href="/match" className="btn btn-primary me-2">
+              Matching Interface
+            </a>
+            <a href="/stats" className="btn btn-secondary">
+              View Statistics
+            </a>
+          </div>
+        </div>
+      )}
+      
+      {user?.role === 'admin' && (
+        <div className="card">
+          <div className="card-body">
+            <h5 className="card-title">Admin Dashboard</h5>
+            <p className="card-text">
+              Manage all system users and data.
+            </p>
+            <a href="/admin/users" className="btn btn-primary me-2">
+              User Management
+            </a>
+            <a href="/stats" className="btn btn-secondary">
+              View Statistics
+            </a>
+          </div>
+        </div>
+      )}
+    </div>
   );
 };
 

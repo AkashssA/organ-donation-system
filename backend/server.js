@@ -185,44 +185,71 @@ app.get('/api/my-donations', authenticateJWT, async (req, res) => {
 });
 
 // Request endpoints
+// Enhanced POST /api/requests endpoint
 app.post('/api/requests', authenticateJWT, async (req, res) => {
   const { organ_id, urgency_level } = req.body;
   const recipient_id = req.user.id;
-  
+
+  // Input validation
+  if (!organ_id || !urgency_level) {
+    return res.status(400).json({ message: 'Missing required fields' });
+  }
+
   try {
+    // Verify organ exists first
+    const [organ] = await db.promise().query(
+      'SELECT id FROM organs WHERE id = ?', 
+      [organ_id]
+    );
+    
+    if (organ.length === 0) {
+      return res.status(404).json({ message: 'Organ not found' });
+    }
+
     const [result] = await db.promise().query(
-      'INSERT INTO requests (recipient_id, organ_id, urgency_level) VALUES (?, ?, ?)',
+      'INSERT INTO requests (recipient_id, organ_id, urgency_level, status) VALUES (?, ?, ?, "pending")',
       [recipient_id, organ_id, urgency_level]
     );
     
     res.status(201).json({ 
       message: 'Request created successfully', 
-      request_id: result.insertId 
+      request_id: result.insertId,
+      organ_name: organ[0].name // Return organ details
     });
   } catch (error) {
-    console.error(error);
+    console.error('Request creation error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 });
 
+// Enhanced GET /api/my-requests endpoint
 app.get('/api/my-requests', authenticateJWT, async (req, res) => {
   const recipient_id = req.user.id;
   
   try {
     const [requests] = await db.promise().query(`
-      SELECT r.*, o.name as organ_name, o.description as organ_description 
+      SELECT 
+        r.id, r.urgency_level, r.status, r.created_at,
+        o.name as organ_name, 
+        o.description as organ_description
       FROM requests r
       JOIN organs o ON r.organ_id = o.id
       WHERE r.recipient_id = ?
+      ORDER BY r.created_at DESC
     `, [recipient_id]);
+    
+    // Add debug log
+    console.log(`Returning ${requests.length} requests for recipient ${recipient_id}`);
     
     res.json(requests);
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Server error' });
+    console.error('Failed to fetch requests:', error);
+    res.status(500).json({ 
+      message: 'Server error',
+      error: error.message 
+    });
   }
 });
-
 // Admin/Hospital endpoints
 app.get('/api/all-donations', authenticateJWT, async (req, res) => {
   if (req.user.role !== 'hospital' && req.user.role !== 'admin') {
@@ -424,4 +451,51 @@ app.get('/api/statistics', authenticateJWT, async (req, res) => {
 // Start the server
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
+});
+// Update this endpoint in server.js
+app.put('/api/requests/:id', authenticateJWT, async (req, res) => {
+  if (req.user.role !== 'hospital' && req.user.role !== 'admin') {
+    return res.status(403).json({ message: 'Unauthorized' });
+  }
+  
+  const { status, hospital_id } = req.body;
+  const requestId = req.params.id;
+
+  // Validate status
+  const validStatuses = ['pending', 'matched', 'approved', 'rejected', 'completed', 'cancelled'];
+  if (!validStatuses.includes(status)) {
+    return res.status(400).json({ message: 'Invalid status value' });
+  }
+
+  try {
+    await db.promise().query(
+      'UPDATE requests SET status = ?, hospital_id = ? WHERE id = ?',
+      [status, req.user.role === 'hospital' ? req.user.id : hospital_id, requestId]
+    );
+    
+    res.json({ message: 'Request updated successfully' });
+  } catch (error) {
+    console.error('Status update error:', error);
+    res.status(500).json({ 
+      message: 'Failed to update request status',
+      error: error.message
+    });
+  }
+});
+// Update user profile (allow any logged-in user to update any profile)
+app.put('/api/users/:id', authenticateJWT, async (req, res) => {
+  const userId = req.params.id;
+  const { name, contact_number, address, blood_type } = req.body;
+
+  try {
+    await db.promise().query(
+      'UPDATE users SET name = ?, contact_number = ?, address = ?, blood_type = ? WHERE id = ?',
+      [name, contact_number, address, blood_type, userId]
+    );
+    
+    res.json({ message: 'Profile updated successfully' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
 });
