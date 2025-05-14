@@ -141,8 +141,19 @@ app.post('/api/login', async (req, res) => {
 });
 
 // Protected test route
-app.get('/api/protected', authenticateJWT, (req, res) => {
-  res.json({ message: 'This is a protected route', user: req.user });
+app.get('/api/protected', authenticateJWT, async (req, res) => {
+  try {
+    const [users] = await db.promise().query(
+      'SELECT id, name, email, role, contact_number, blood_type FROM users WHERE id = ?', 
+      [req.user.id]
+    );
+    if (users.length === 0) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    res.json({ user: users[0] });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error' });
+  }
 });
 
 // Donation endpoints
