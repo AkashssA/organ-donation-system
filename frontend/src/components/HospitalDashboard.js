@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import axios from 'axios';
 import { Tab, Tabs, Table, Button, Spinner, Alert, Form } from 'react-bootstrap';
+import { Link } from 'react-router-dom';
 
 const HospitalDashboard = () => {
   const { user } = useAuth();
@@ -61,7 +62,13 @@ const HospitalDashboard = () => {
 
   return (
     <div className="container mt-4">
-      <h2>Hospital Dashboard</h2>
+      <div className="d-flex justify-content-between align-items-center mb-4">
+        <h2>Hospital Dashboard</h2>
+        <Link to="/hospital/matching" className="btn btn-primary">
+          Go to Matching System
+        </Link>
+      </div>
+      
       {error && <Alert variant="danger">{error}</Alert>}
 
       <Tabs defaultActiveKey="donations" className="mb-3">

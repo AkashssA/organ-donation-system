@@ -1,6 +1,5 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
 
 const AuthContext = createContext();
 
@@ -8,7 +7,6 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(localStorage.getItem('token'));
   const [loading, setLoading] = useState(true);
-  const navigate = useNavigate();
 
   // Set axios baseURL and auth header
   axios.defaults.baseURL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
@@ -53,28 +51,18 @@ export const AuthProvider = ({ children }) => {
       localStorage.setItem('token', token);
       setToken(token);
       setUser(user);
-
-      const redirectPath = {
-        admin: '/admin',
-        hospital: '/hospital',
-        donor: '/donor',
-        recipient: '/recipient',
-      }[user.role.toLowerCase()] || '/';
-
-      navigate(redirectPath);
       return response.data;
     } catch (error) {
       console.error('Login error:', error);
       throw error.response?.data?.message || 'Login failed';
     }
-  }, [navigate]);
+  }, []);
 
   const logout = useCallback(() => {
     localStorage.removeItem('token');
     setToken(null);
     setUser(null);
-    navigate('/login');
-  }, [navigate]);
+  }, []);
 
   const verifyToken = useCallback(async () => {
     try {

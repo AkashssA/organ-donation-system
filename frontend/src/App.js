@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import LoginForm from './components/LoginForm';
 import RegisterForm from './components/RegisterForm';
@@ -14,18 +14,26 @@ import MyRequests from './components/MyRequests';
 import Profile from './components/Profile';
 import HospitalDashboard from './components/HospitalDashboard';
 import Statistics from './components/Statistics';
+import MatchingSystem from './components/MatchingSystem';
 import 'bootstrap/dist/css/bootstrap.min.css';
 
 // Protected Route component
 const ProtectedRoute = ({ children, roles }) => {
   const { user, loading } = useAuth();
+  const navigate = useNavigate();
+
+  React.useEffect(() => {
+    if (!loading && !user) {
+      navigate('/login');
+    }
+  }, [user, loading, navigate]);
 
   if (loading) {
     return <div>Loading...</div>;
   }
 
   if (!user) {
-    return <Navigate to="/login" />;
+    return null;
   }
 
   if (roles && !roles.includes(user.role)) {
@@ -42,13 +50,33 @@ const ProtectedRoute = ({ children, roles }) => {
   );
 };
 
+// Login Handler component
+const LoginHandler = () => {
+  const { user, loading } = useAuth();
+  const navigate = useNavigate();
+
+  React.useEffect(() => {
+    if (!loading && user) {
+      const redirectPath = {
+        admin: '/admin',
+        hospital: '/hospital',
+        donor: '/donor',
+        recipient: '/recipient',
+      }[user.role.toLowerCase()] || '/';
+      navigate(redirectPath);
+    }
+  }, [user, loading, navigate]);
+
+  return <LoginForm />;
+};
+
 const App = () => {
   return (
     <Router basename={process.env.PUBLIC_URL}>
       <AuthProvider>
         <Routes>
           {/* Public routes */}
-          <Route path="/login" element={<LoginForm />} />
+          <Route path="/login" element={<LoginHandler />} />
           <Route path="/register" element={<RegisterForm />} />
 
           {/* Default route redirects to login */}
@@ -92,6 +120,11 @@ const App = () => {
           <Route path="/hospital" element={
             <ProtectedRoute roles={['hospital']}>
               <HospitalDashboard />
+            </ProtectedRoute>
+          } />
+          <Route path="/hospital/matching" element={
+            <ProtectedRoute roles={['hospital']}>
+              <MatchingSystem />
             </ProtectedRoute>
           } />
           <Route path="/stats" element={

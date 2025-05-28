@@ -14,6 +14,7 @@ const RegisterForm = () => {
     blood_type: ''
   });
   const [error, setError] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
   const { register } = useAuth();
   const navigate = useNavigate();
 
@@ -28,15 +29,19 @@ const RegisterForm = () => {
     e.preventDefault();
     try {
       await register(formData);
+      setSuccessMessage('Registered successfully!');
+      setError(''); // Clear any previous errors
     } catch (err) {
-      setError(err);
+      setError(err.message || 'Registration failed.'); // Use err.message for clearer error or a default
+      setSuccessMessage(''); // Clear any previous success message
     }
   };
 
   return (
     <Form onSubmit={handleSubmit}>
       {error && <Alert variant="danger">{error}</Alert>}
-      
+      {successMessage && <Alert variant="success">{successMessage}</Alert>}
+
       <Form.Group className="mb-3">
         <Form.Label>Full Name</Form.Label>
         <Form.Control
@@ -75,9 +80,9 @@ const RegisterForm = () => {
 
       <Form.Group className="mb-3">
         <Form.Label>Role</Form.Label>
-        <Form.Select 
-          name="role" 
-          value={formData.role} 
+        <Form.Select
+          name="role"
+          value={formData.role}
           onChange={handleChange}
           required
         >
@@ -113,9 +118,9 @@ const RegisterForm = () => {
 
       <Form.Group className="mb-3">
         <Form.Label>Blood Type</Form.Label>
-        <Form.Select 
-          name="blood_type" 
-          value={formData.blood_type} 
+        <Form.Select
+          name="blood_type"
+          value={formData.blood_type}
           onChange={handleChange}
         >
           <option value="">Select blood type</option>
@@ -133,7 +138,7 @@ const RegisterForm = () => {
       <Button variant="primary" type="submit" className="w-100">
         Register
       </Button>
-      
+
       <div className="mt-3 text-center">
         <Button variant="link" onClick={() => navigate('/login')}>
           Already have an account? Login
